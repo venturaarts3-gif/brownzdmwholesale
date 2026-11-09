@@ -1,0 +1,1 @@
+window.BUYER_CRITERIA = [];
