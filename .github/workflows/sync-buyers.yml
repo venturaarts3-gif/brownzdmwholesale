@@ -1,0 +1,30 @@
+
+name: Sync approved buyer criteria
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  update-buyers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Fetch approved public criteria
+        run: python sync_buyers.py
+      - name: Commit changes if needed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add buyers.js
+          if ! git diff --cached --quiet; then
+            git commit -m "Update approved buyer criteria"
+            git push
+          fi
