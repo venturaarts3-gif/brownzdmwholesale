@@ -5,8 +5,22 @@ from urllib.request import Request, urlopen
 
 ENDPOINT = "https://script.google.com/macros/s/AKfycbzIkgcXt5dddq1bBz6UthyhwZZ9Ibpw42MymS6AKpvqSRjZyXqYT3BPI4Xw3fTKoKwE/exec"
 
-with urlopen(Request(ENDPOINT, headers={"User-Agent": "BrownZDMWholesale-Sync/1.0"}), timeout=35) as response:
-    payload = json.load(response)
+request = Request(ENDPOINT, headers={"User-Agent": "Mozilla/5.0", "Accept": "application/json,text/plain,*/*"})
+with urlopen(request, timeout=45) as response:
+    raw = response.read()
+    content_type = response.headers.get("Content-Type", "")
+    final_url = response.geturl()
+
+try:
+    payload = json.loads(raw.decode("utf-8-sig"))
+except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+    preview = raw[:250].decode("utf-8", errors="replace")
+    raise RuntimeError(
+        f"Google endpoint did not return JSON (HTTP response content-type: {content_type}; "
+        f"final host: {final_url.split('/')[2]}; bytes: {len(raw)}). "
+        f"Response starts with: {preview!r}"
+    ) from exc
+
 if not isinstance(payload, dict) or not isinstance(payload.get("buyers"), list):
     raise ValueError("Expected JSON with a buyers list; existing website data unchanged")
 
@@ -34,3 +48,4 @@ for item in payload["buyers"]:
 output = "/* Automatically generated from approved PUBLIC buyer criteria. Do not edit manually. */\nwindow.BUYER_CRITERIA = " + json.dumps(records, ensure_ascii=False, indent=2).replace("<", "\\u003c") + ";\n"
 Path("buyers.js").write_text(output, encoding="utf-8")
 print(f"Synced {len(records)} approved public buyer criteria")
+
